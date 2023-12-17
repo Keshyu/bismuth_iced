@@ -1,10 +1,11 @@
 use anyhow::Result;
 use iced::{
     keyboard::Modifiers,
-    subscription,
+    subscription, theme,
     widget::{container, text, Column},
     window, Application, Command, Element, Length, Settings, Subscription,
 };
+use style::LineSelected;
 
 fn main() -> Result<()> {
     Bismuth::run(Settings::default())?;
@@ -37,7 +38,7 @@ impl Application for Bismuth {
                 code: vec!["".into()],
                 selection: 0,
             },
-            Command::none(),
+            window::maximize(true),
         )
     }
 
@@ -109,7 +110,7 @@ impl Application for Bismuth {
                 .map(|(i, line)| {
                     if i == self.selection {
                         container(text(line).size(32))
-                            .style(iced::theme::Container::Box)
+                            .style(theme::Container::Custom(Box::new(LineSelected)))
                             .into()
                     } else {
                         text(line).size(32).into()
@@ -132,4 +133,22 @@ impl Application for Bismuth {
 #[derive(Debug)]
 enum Message {
     IcedEvent(iced::Event),
+}
+
+mod style {
+    use iced::{widget::container, Color};
+
+    pub struct LineSelected;
+
+    impl container::StyleSheet for LineSelected {
+        type Style = iced::Theme;
+
+        fn appearance(&self, _style: &Self::Style) -> container::Appearance {
+            container::Appearance {
+                background: Some(Color::from_rgb8(71, 52, 94).into()),
+                text_color: Some(Color::WHITE),
+                ..Default::default()
+            }
+        }
+    }
 }
