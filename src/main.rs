@@ -15,6 +15,15 @@ struct Bismuth {
     code: Vec<String>,
     selection: usize,
 }
+impl Bismuth {
+    fn selected_mut(&mut self) -> Option<&mut String> {
+        self.code.get_mut(self.selection)
+    }
+
+    fn selected(&self) -> Option<&String> {
+        self.code.get(self.selection)
+    }
+}
 
 impl Application for Bismuth {
     type Executor = iced::executor::Default;
@@ -46,24 +55,40 @@ impl Application for Bismuth {
 
         match message {
             IcedEvent(Keyboard(k_event)) => match k_event {
-                CharacterReceived(letter @ 'a'..='z') => {
-                    self.code.last_mut().unwrap().push(letter);
+                CharacterReceived(letter @ ('a'..='z' | ' ')) => {
+                    self.selected_mut().unwrap().push(letter);
                     Command::none()
                 }
                 KeyPressed {
                     key_code: Backspace,
                     modifiers: NONE,
                 } => {
-                    self.code.last_mut().unwrap().pop();
+                    self.selected_mut().unwrap().pop();
                     Command::none()
                 }
                 KeyPressed {
                     key_code: Enter,
                     modifiers: NONE,
                 } => {
-                    if !self.code.last().unwrap().is_empty() {
-                        self.code.push("".into());
+                    if !self.selected().unwrap().is_empty() {
+                        self.code.insert(self.selection + 1, "".into());
+                        self.selection += 1;
                     }
+                    Command::none()
+                }
+                KeyPressed {
+                    key_code: K,
+                    modifiers: Modifiers::SHIFT,
+                } => {
+                    self.selection += 1;
+                    self.selection = self.selection.min(self.code.len() - 1);
+                    Command::none()
+                }
+                KeyPressed {
+                    key_code: L,
+                    modifiers: Modifiers::SHIFT,
+                } => {
+                    self.selection = self.selection.saturating_sub(1);
                     Command::none()
                 }
                 KeyPressed {
@@ -83,13 +108,13 @@ impl Application for Bismuth {
                 .enumerate()
                 .map(|(i, line)| {
                     if i == self.selection {
-                        container(text(line)).style(theme::C)
+                        container(text(line).size(32))
+                            .style(iced::theme::Container::Box)
+                            .into()
                     } else {
-                        text(line).size(32)
+                        text(line).size(32).into()
                     }
                 })
-                .map(|(_, line)| line)
-                .map(Element::from)
                 .collect(),
         ))
         .width(Length::Fill)
