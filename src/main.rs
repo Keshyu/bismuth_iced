@@ -1,11 +1,12 @@
 use anyhow::Result;
 use iced::{
     keyboard::Modifiers,
-    subscription, theme,
-    widget::{container, text, Column},
+    subscription,
+    theme::Container,
+    widget::{container, text, Column, Row},
     window, Application, Command, Element, Length, Settings, Subscription,
 };
-use style::LineSelected;
+use style::{LineSelected, WordSelected};
 
 fn main() -> Result<()> {
     Bismuth::run(Settings::default())?;
@@ -13,16 +14,32 @@ fn main() -> Result<()> {
 }
 
 struct Bismuth {
-    code: Vec<String>,
-    selection: usize,
+    code: Vec<Vec<String>>,
+    sel: Selection,
 }
+
+struct Selection {
+    line: usize,
+    word: usize,
+}
+
 impl Bismuth {
-    fn selected_mut(&mut self) -> Option<&mut String> {
-        self.code.get_mut(self.selection)
+    fn sel_line(&self) -> Option<&[String]> {
+        self.code.get(self.sel.line).map(|v| v.as_slice())
     }
 
-    fn selected(&self) -> Option<&String> {
-        self.code.get(self.selection)
+    fn sel_line_mut(&mut self) -> Option<&mut Vec<String>> {
+        self.code.get_mut(self.sel.line)
+    }
+
+    fn sel_word(&self) -> Option<&str> {
+        self.sel_line()
+            .and_then(|line| line.get(self.sel.word).map(|word| word.as_str()))
+    }
+
+    fn sel_word_mut(&mut self) -> Option<&mut String> {
+        let word = self.sel.word;
+        self.sel_line_mut().and_then(|line| line.get_mut(word))
     }
 }
 
@@ -35,8 +52,8 @@ impl Application for Bismuth {
     fn new(_flags: Self::Flags) -> (Self, Command<Message>) {
         (
             Self {
-                code: vec!["".into()],
-                selection: 0,
+                code: vec![vec!["".into()]],
+                sel: Selection { line: 0, word: 0 },
             },
             window::maximize(true),
         )
@@ -56,24 +73,33 @@ impl Application for Bismuth {
 
         match message {
             IcedEvent(Keyboard(k_event)) => match k_event {
-                CharacterReceived(letter @ ('a'..='z' | ' ')) => {
-                    self.selected_mut().unwrap().push(letter);
+                CharacterReceived(letter @ 'a'..='z') => {
+                    self.sel_word_mut().unwrap().push(letter);
+                    Command::none()
+                }
+                KeyPressed {
+                    key_code: Space,
+                    modifiers: NONE,
+                } => {
+                    self.sel_line_mut().unwrap().push("".into());
+                    self.sel.word += 1;
                     Command::none()
                 }
                 KeyPressed {
                     key_code: Backspace,
                     modifiers: NONE,
                 } => {
-                    self.selected_mut().unwrap().pop();
+                    self.sel_word_mut().unwrap().pop();
                     Command::none()
                 }
                 KeyPressed {
                     key_code: Enter,
                     modifiers: NONE,
                 } => {
-                    if !self.selected().unwrap().is_empty() {
-                        self.code.insert(self.selection + 1, "".into());
-                        self.selection += 1;
+                    if !self.sel_word().unwrap().is_empty() {
+                        self.code.insert(self.sel.line + 1, vec!["".into()]);
+                        self.sel.line += 1;
+                        self.sel.word = 0;
                     }
                     Command::none()
                 }
@@ -81,15 +107,15 @@ impl Application for Bismuth {
                     key_code: K,
                     modifiers: Modifiers::SHIFT,
                 } => {
-                    self.selection += 1;
-                    self.selection = self.selection.min(self.code.len() - 1);
+                    self.sel.line += 1;
+                    self.sel.line = self.sel.line.min(self.code.len() - 1);
                     Command::none()
                 }
                 KeyPressed {
                     key_code: L,
                     modifiers: Modifiers::SHIFT,
                 } => {
-                    self.selection = self.selection.saturating_sub(1);
+                    self.sel.line = self.sel.line.saturating_sub(1);
                     Command::none()
                 }
                 KeyPressed {
@@ -107,13 +133,31 @@ impl Application for Bismuth {
             self.code
                 .iter()
                 .enumerate()
-                .map(|(i, line)| {
-                    if i == self.selection {
-                        container(text(line).size(32))
-                            .style(theme::Container::Custom(Box::new(LineSelected)))
+                .map(|(line_i, line)| (line_i == self.sel.line, line))
+                .map(|(is_line_sel, line)| {
+                    let line = Row::with_children(
+                        line.iter()
+                            .enumerate()
+                            .map(|(word_i, word)| (is_line_sel && word_i == self.sel.word, word))
+                            .map(|(is_word_sel, word)| {
+                                let word = text(word).size(32).into();
+                                if is_word_sel {
+                                    container(word)
+                                        .style(Container::Custom(Box::new(WordSelected)))
+                                        .into()
+                                } else {
+                                    word
+                                }
+                            })
+                            .collect(),
+                    )
+                    .spacing(8);
+                    if is_line_sel {
+                        container(line)
+                            .style(Container::Custom(Box::new(LineSelected)))
                             .into()
                     } else {
-                        text(line).size(32).into()
+                        line.into()
                     }
                 })
                 .collect(),
@@ -146,6 +190,20 @@ mod style {
         fn appearance(&self, _style: &Self::Style) -> container::Appearance {
             container::Appearance {
                 background: Some(Color::from_rgb8(71, 52, 94).into()),
+                text_color: Some(Color::WHITE),
+                ..Default::default()
+            }
+        }
+    }
+
+    pub struct WordSelected;
+
+    impl container::StyleSheet for WordSelected {
+        type Style = iced::Theme;
+
+        fn appearance(&self, _style: &Self::Style) -> container::Appearance {
+            container::Appearance {
+                background: Some(Color::from_rgb8(43, 28, 61).into()),
                 text_color: Some(Color::WHITE),
                 ..Default::default()
             }
