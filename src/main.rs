@@ -181,6 +181,7 @@ impl Application for Bismuth {
                     modifiers: Modifiers::SHIFT,
                 } => {
                     self.code.insert(self.sel.line, vec!["".into()]);
+                    self.sel.word = 0;
                     self.remove_if_empty(&Selection {
                         line: self.sel.line + 1,
                         ..self.sel
