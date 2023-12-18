@@ -18,28 +18,59 @@ struct Bismuth {
     sel: Selection,
 }
 
+#[derive(PartialEq)]
 struct Selection {
     line: usize,
     word: usize,
 }
 
 impl Bismuth {
-    fn sel_line(&self) -> Option<&[String]> {
-        self.code.get(self.sel.line).map(|v| v.as_slice())
+    fn set_sel(&mut self, sel: Selection) {
+        let mut old_sel = sel;
+        std::mem::swap(&mut old_sel, &mut self.sel);
+
+        self.sel.line = self.sel.line.clamp(0, self.code.len() - 1);
+
+        if old_sel.line != self.sel.line {
+            self.sel.word = 0;
+        } else {
+            self.sel.word = self
+                .sel
+                .word
+                .clamp(0, self.code.get(self.sel.line).unwrap().len() - 1);
+        }
+
+        if old_sel != self.sel {
+            self.remove_if_empty(&old_sel);
+        }
     }
 
-    fn sel_line_mut(&mut self) -> Option<&mut Vec<String>> {
-        self.code.get_mut(self.sel.line)
+    fn remove(&mut self, pos: &Selection) {
+        // ASSUME: pos is in-bounds
+
+        self.code.get_mut(pos.line).unwrap().remove(pos.word);
+        if self.sel.line == pos.line && self.sel.word >= pos.word {
+            self.sel.word = self.sel.word.saturating_sub(1);
+        }
+        if self.code.get(pos.line).unwrap().len() == 0 {
+            self.code.remove(pos.line);
+            if self.sel.line >= pos.line {
+                self.sel.line = self.sel.line.saturating_sub(1);
+            }
+        }
+        if self.code.is_empty() {
+            self.code.push(vec!["".into()]);
+        }
     }
 
-    fn sel_word(&self) -> Option<&str> {
-        self.sel_line()
-            .and_then(|line| line.get(self.sel.word).map(|word| word.as_str()))
+    fn remove_if_empty(&mut self, pos: &Selection) {
+        if self.get(pos).unwrap().is_empty() {
+            self.remove(pos);
+        }
     }
 
-    fn sel_word_mut(&mut self) -> Option<&mut String> {
-        let word = self.sel.word;
-        self.sel_line_mut().and_then(|line| line.get_mut(word))
+    fn get(&self, pos: &Selection) -> Option<&str> {
+        Some(self.code.get(pos.line)?.get(pos.word)?.as_str())
     }
 }
 
@@ -74,48 +105,116 @@ impl Application for Bismuth {
         match message {
             IcedEvent(Keyboard(k_event)) => match k_event {
                 CharacterReceived(letter @ 'a'..='z') => {
-                    self.sel_word_mut().unwrap().push(letter);
-                    Command::none()
-                }
-                KeyPressed {
-                    key_code: Space,
-                    modifiers: NONE,
-                } => {
-                    self.sel_line_mut().unwrap().push("".into());
-                    self.sel.word += 1;
+                    self.code
+                        .get_mut(self.sel.line)
+                        .unwrap()
+                        .get_mut(self.sel.word)
+                        .unwrap()
+                        .push(letter);
                     Command::none()
                 }
                 KeyPressed {
                     key_code: Backspace,
                     modifiers: NONE,
                 } => {
-                    self.sel_word_mut().unwrap().pop();
-                    Command::none()
-                }
-                KeyPressed {
-                    key_code: Enter,
-                    modifiers: NONE,
-                } => {
-                    if !self.sel_word().unwrap().is_empty() {
-                        self.code.insert(self.sel.line + 1, vec!["".into()]);
-                        self.sel.line += 1;
-                        self.sel.word = 0;
-                    }
+                    self.code
+                        .get_mut(self.sel.line)
+                        .unwrap()
+                        .get_mut(self.sel.word)
+                        .unwrap()
+                        .pop();
                     Command::none()
                 }
                 KeyPressed {
                     key_code: K,
                     modifiers: Modifiers::SHIFT,
                 } => {
-                    self.sel.line += 1;
-                    self.sel.line = self.sel.line.min(self.code.len() - 1);
+                    self.set_sel(Selection {
+                        line: self.sel.line + 1,
+                        ..self.sel
+                    });
                     Command::none()
                 }
                 KeyPressed {
                     key_code: L,
                     modifiers: Modifiers::SHIFT,
                 } => {
-                    self.sel.line = self.sel.line.saturating_sub(1);
+                    self.set_sel(Selection {
+                        line: self.sel.line.saturating_sub(1),
+                        ..self.sel
+                    });
+                    Command::none()
+                }
+                KeyPressed {
+                    key_code: J,
+                    modifiers: Modifiers::SHIFT,
+                } => {
+                    self.set_sel(Selection {
+                        word: self.sel.word.saturating_sub(1),
+                        ..self.sel
+                    });
+                    Command::none()
+                }
+                KeyPressed {
+                    key_code: Semicolon,
+                    modifiers: Modifiers::SHIFT,
+                } => {
+                    self.set_sel(Selection {
+                        word: self.sel.word + 1,
+                        ..self.sel
+                    });
+                    Command::none()
+                }
+                KeyPressed {
+                    key_code: I,
+                    modifiers: Modifiers::SHIFT,
+                } => {
+                    self.code.insert(self.sel.line + 1, vec!["".into()]);
+                    self.set_sel(Selection {
+                        line: self.sel.line + 1,
+                        ..self.sel
+                    });
+                    Command::none()
+                }
+                KeyPressed {
+                    key_code: O,
+                    modifiers: Modifiers::SHIFT,
+                } => {
+                    self.code.insert(self.sel.line, vec!["".into()]);
+                    self.remove_if_empty(&Selection {
+                        line: self.sel.line + 1,
+                        ..self.sel
+                    });
+                    Command::none()
+                }
+                KeyPressed {
+                    key_code: Space,
+                    modifiers: Modifiers::SHIFT,
+                } => {
+                    let word = self.sel.word;
+                    self.code
+                        .get_mut(self.sel.line)
+                        .unwrap()
+                        .insert(word, "".into());
+                    self.remove_if_empty(&Selection {
+                        word: self.sel.word + 1,
+                        ..self.sel
+                    });
+                    Command::none()
+                }
+                KeyPressed {
+                    key_code: Space,
+                    modifiers: NONE,
+                } => {
+                    let word = self.sel.word;
+                    self.code
+                        .get_mut(self.sel.line)
+                        .unwrap()
+                        .insert(word + 1, "".into());
+                    self.set_sel(Selection {
+                        word: self.sel.word + 1,
+                        ..self.sel
+                    });
                     Command::none()
                 }
                 KeyPressed {
