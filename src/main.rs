@@ -1,16 +1,17 @@
-use anyhow::Result;
+mod code;
+
+use code::Code;
 use iced::{
     keyboard::Modifiers,
     subscription,
     theme::Container,
     widget::{container, text, Column, Row},
-    window, Application, Command, Element, Length, Settings, Subscription,
+    window, Application, Element, Length, Settings, Subscription,
 };
 use style::{LineSelected, WordSelected};
 
-fn main() -> Result<()> {
-    Bismuth::run(Settings::default())?;
-    Ok(())
+fn main() -> Result<(), iced::Error> {
+    Bismuth::run(Settings::default())
 }
 
 struct Bismuth {
@@ -46,7 +47,7 @@ impl Bismuth {
     }
 
     fn remove(&mut self, pos: &Selection) {
-        // ASSUME: pos is in-bounds
+        // ASSUME: `pos` is in-bounds
 
         self.code.get_mut(pos.line).unwrap().remove(pos.word);
         if self.sel.line == pos.line && self.sel.word >= pos.word {
@@ -64,6 +65,8 @@ impl Bismuth {
     }
 
     fn remove_if_empty(&mut self, pos: &Selection) {
+        // ASSUME: `pos` is in-bounds
+
         if self.get(pos).unwrap().is_empty() {
             self.remove(pos);
         }
@@ -80,10 +83,15 @@ impl Application for Bismuth {
     type Theme = iced::Theme;
     type Flags = ();
 
-    fn new(_flags: Self::Flags) -> (Self, Command<Message>) {
+    fn new(_flags: Self::Flags) -> (Self, iced::Command<Message>) {
         (
             Self {
-                code: vec![vec!["".into()]],
+                // code: vec![vec!["".into()]],
+                code: "main assigns to\n1 to 3\nmap add 1\nfilter even\neach print"
+                    .split('\n')
+                    .into_iter()
+                    .map(|line| line.split_whitespace().map(ToOwned::to_owned).collect())
+                    .collect(),
                 sel: Selection { line: 0, word: 0 },
             },
             window::maximize(true),
@@ -94,7 +102,7 @@ impl Application for Bismuth {
         "Bismuth".into()
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message) -> iced::Command<Message> {
         use iced::event::Event::*;
         use iced::keyboard::Event::*;
         use iced::keyboard::KeyCode::*;
@@ -111,7 +119,7 @@ impl Application for Bismuth {
                         .get_mut(self.sel.word)
                         .unwrap()
                         .push(letter);
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: Backspace,
@@ -123,7 +131,7 @@ impl Application for Bismuth {
                         .get_mut(self.sel.word)
                         .unwrap()
                         .pop();
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: K,
@@ -133,7 +141,7 @@ impl Application for Bismuth {
                         line: self.sel.line + 1,
                         ..self.sel
                     });
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: L,
@@ -143,7 +151,7 @@ impl Application for Bismuth {
                         line: self.sel.line.saturating_sub(1),
                         ..self.sel
                     });
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: J,
@@ -153,7 +161,7 @@ impl Application for Bismuth {
                         word: self.sel.word.saturating_sub(1),
                         ..self.sel
                     });
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: Semicolon,
@@ -163,7 +171,7 @@ impl Application for Bismuth {
                         word: self.sel.word + 1,
                         ..self.sel
                     });
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: I,
@@ -174,7 +182,7 @@ impl Application for Bismuth {
                         line: self.sel.line + 1,
                         ..self.sel
                     });
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: O,
@@ -186,7 +194,7 @@ impl Application for Bismuth {
                         line: self.sel.line + 1,
                         ..self.sel
                     });
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: Space,
@@ -201,7 +209,7 @@ impl Application for Bismuth {
                         word: self.sel.word + 1,
                         ..self.sel
                     });
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: Space,
@@ -216,15 +224,15 @@ impl Application for Bismuth {
                         word: self.sel.word + 1,
                         ..self.sel
                     });
-                    Command::none()
+                    iced::Command::none()
                 }
                 KeyPressed {
                     key_code: Q,
                     modifiers: Modifiers::SHIFT,
                 } => window::close(),
-                _ => Command::none(),
+                _ => iced::Command::none(),
             },
-            _ => Command::none(),
+            _ => iced::Command::none(),
         }
     }
 
@@ -240,25 +248,20 @@ impl Application for Bismuth {
                             .enumerate()
                             .map(|(word_i, word)| (is_line_sel && word_i == self.sel.word, word))
                             .map(|(is_word_sel, word)| {
-                                let word = text(word).size(32).into();
+                                let mut word = container(text(word).size(32));
                                 if is_word_sel {
-                                    container(word)
-                                        .style(Container::Custom(Box::new(WordSelected)))
-                                        .into()
-                                } else {
-                                    word
+                                    word = word.style(Container::Custom(Box::new(WordSelected)));
                                 }
+                                word.into()
                             })
                             .collect(),
                     )
                     .spacing(8);
+                    let mut line = container(line).padding([0, 12]);
                     if is_line_sel {
-                        container(line)
-                            .style(Container::Custom(Box::new(LineSelected)))
-                            .into()
-                    } else {
-                        line.into()
+                        line = line.style(Container::Custom(Box::new(LineSelected)));
                     }
+                    line.into()
                 })
                 .collect(),
         ))
