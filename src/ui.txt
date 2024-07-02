@@ -1,0 +1,32 @@
+(screen)                                          # 1280 x 720
+
+0,0 = red
+0,1 = red
+1,0 = red
+1,1 = red
+
+main envelops (side, jokers, items, shop, deck)
+main.center = screen.center
+
+side.width = 80
+side.height = screen.height                       # 720
+
+jokers.height = card.height                       # 60
+jokers.width = card.width * 5 + 4 * 4             # 216
+jokers.x = side.x + 30                            # 
+
+items.width = card.width * 0.8 * 3                # 96
+items.height = card.height                        # 60
+items.x = jokers.x + 10
+
+shop.x = jokers.x
+shop.top = jokers.bottom - 10
+shop.bottom = screen.bottom
+
+deck.height = card.height + 6
+deck.width = card.width + 6
+deck.x = shop.x + 10
+deck.bottom = screen.bottom + 5
+
+card.width = 40
+card.width / card.height = 2 / 3                  # 60

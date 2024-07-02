@@ -1,0 +1,20 @@
+Indir: 
+
+Doc:  `width` is new info attached to `42`
+Sync: changing one instance changes them all
+Def:  what `iden` gets replaced with
+Iden: access a specific value w/o ambiguity
+
+Binding: doc, sync
+	iden, def
+Abstraction: doc, sync
+	iden, placeholder, def
+
+Function: abstraction
+
+
+Context: area of code with specific available idens
+	Additive context:    inside types, functions, control flow
+	Overwriting context: `f32(3 + 4 / 10)` all numbers are assumed `f32`
+	Isolating context:   inside files, modules, submodules
+

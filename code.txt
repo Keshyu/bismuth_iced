@@ -1,0 +1,32 @@
+No delimiters when line break is already present
+
+Abstraction combos are controlled by the user
+	If two operators don't have a defined precedence relationship, they cannot be used together without brackets
+
+Highlighting is based on semantics, not syntax
+
+No brackets on empty lines
+
+Bigger line height instead of empty lines as visual separators
+
+Switch on/off different aspects of code separately
+	Docs, Notes, Memory management, Error handling, etc.
+
+Code UI
+	Data is separate from its Organization & Access
+
+	The difference between accessing a field and calling a method
+		`array.length` vs `array.length()`
+		`length` is either stored or computed
+			if the call site doesn't care, why is the distinction made?
+
+	Partially import external tools
+		`library/Item` instead of `submodule/Item` or `library/full-path/Item`
+		"I want to separate external tools from my code but also refer to them by a short name that gives me just enough context (like the library's name but not any submodule names)"
+
+	Implicit inputs & outputs
+
+	Value that's visually repeated but internally singular
+		To achieve performance w/o sacrificing readability
+
+Tail dedent
