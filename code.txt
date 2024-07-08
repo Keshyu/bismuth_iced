@@ -1,3 +1,10 @@
+Aspects
+	Capacity
+
+	Density
+		How much work a single tool does
+	Versatility
+
 No delimiters when line break is already present
 
 Abstraction combos are controlled by the user
@@ -13,7 +20,11 @@ Switch on/off different aspects of code separately
 	Docs, Notes, Memory management, Error handling, etc.
 
 Code UI
-	Data is separate from its Organization & Access
+	Data's memory management is separate from its Organization & Access
+
+	Type iden: identifying a value by its structure (type)
+		Type converters: `(Str -> Int): <definition>`
+		Unique values: `Console` `Window` `Rng`
 
 	The difference between accessing a field and calling a method
 		`array.length` vs `array.length()`
@@ -29,4 +40,7 @@ Code UI
 	Value that's visually repeated but internally singular
 		To achieve performance w/o sacrificing readability
 
-Tail dedent
+	Tail dedent
+		If the inner block extends to the end of the outer block, the inner block can be dedented
+		Superset of do-notation
+		Can be used for short-circuiting

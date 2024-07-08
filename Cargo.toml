@@ -1,5 +1,5 @@
 [package]
-name = "bismuth-iced"
+name = "bismuth_iced"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 anim = "0.1.4"
 apply = "0.3.0"
-iced = { version = "^0.12.0", features = ["advanced", "svg", "tokio"] }
+iced = { version = "^0.12.0", features = ["advanced", "lazy", "svg", "tokio"] }

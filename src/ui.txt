@@ -30,3 +30,4 @@ deck.bottom = screen.bottom + 5
 
 card.width = 40
 card.width / card.height = 2 / 3                  # 60
+card.width = 2 / 3 * card.height

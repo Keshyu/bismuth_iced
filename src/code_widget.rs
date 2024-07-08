@@ -361,6 +361,9 @@ where
 			};
 
 			node.move_to_mut(Point::new(x, y));
+
+			*node = Node::with_children(node.size(), vec![*node]);
+
 			main += axis.main(node.size());
 		}
 
